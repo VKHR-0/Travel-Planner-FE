@@ -1,3 +1,4 @@
+import { CreateProjectForm } from "@/components/projects/create-project-form"
 import { ProjectsList } from "@/components/projects/projects-list"
 
 export default function Page() {
@@ -10,7 +11,10 @@ export default function Page() {
         </p>
       </header>
 
-      <ProjectsList />
+      <div className="grid gap-6 lg:grid-cols-[minmax(300px,380px)_1fr] lg:items-start">
+        <CreateProjectForm />
+        <ProjectsList />
+      </div>
     </main>
   )
 }
