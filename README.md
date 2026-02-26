@@ -62,44 +62,9 @@ NEXT_PUBLIC_API_BASE_URL=/api
 ```
 
 Notes:
+
 - `API_BASE_URL`: used on Next server routes (proxy to your backend).
 - `NEXT_PUBLIC_API_BASE_URL`: used by browser client; default `/api` is recommended.
-
-## Routes
-
-- `/` - list travel projects
-- `/new` - create a new project with places
-- `/api/projects` - Next proxy for backend projects API
-- `/api/artworks/search?q=<query>` - Next proxy for Art Institute search
-
-## Example Requests
-
-List projects through frontend proxy:
-
-```bash
-curl "http://localhost:3000/api/projects"
-```
-
-Create a project through frontend proxy:
-
-```bash
-curl -X POST "http://localhost:3000/api/projects" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Chicago Weekend",
-    "description": "Art walk plan",
-    "start_date": "2026-03-20",
-    "places": [
-      {"external_id": 129884, "notes": "Start early"}
-    ]
-  }'
-```
-
-Search artworks:
-
-```bash
-curl "http://localhost:3000/api/artworks/search?q=monet"
-```
 
 ## Troubleshooting
 
