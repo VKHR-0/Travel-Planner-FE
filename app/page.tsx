@@ -1,10 +1,16 @@
+import { ProjectsList } from "@/components/projects/projects-list"
+
 export default function Page() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center p-6">
-      <div className="text-center">
+    <main className="mx-auto min-h-screen w-full max-w-6xl space-y-6 p-6">
+      <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Travel Projects Management</h1>
-        <p className="text-muted-foreground mt-3">Frontend implementation in progress.</p>
-      </div>
+        <p className="text-muted-foreground">
+          Browse all travel projects synced from your backend API.
+        </p>
+      </header>
+
+      <ProjectsList />
     </main>
   )
 }
