@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 
 export default function NewProjectPage() {
 	return (
-		<main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center p-6">
+		<main
+			id="main-content"
+			className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center p-6"
+		>
 			<div className="w-full space-y-4">
 				<Button
 					nativeButton={false}
 					render={<Link href="/" />}
 					variant="outline"
 				>
-					<HugeiconsIcon icon={ArrowLeftIcon} strokeWidth={2} />
-					Back to projects
+					<HugeiconsIcon aria-hidden="true" icon={ArrowLeftIcon} strokeWidth={2} />
+					Back to Projects
 				</Button>
 				<CreateProjectForm />
 			</div>

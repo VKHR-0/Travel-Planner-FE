@@ -1,6 +1,8 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loading03Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useEffect, useMemo, useState } from "react"
@@ -79,7 +81,25 @@ export function CreateProjectForm() {
   const form = useForm<CreateProjectFormValues>({
     resolver: zodResolver(createProjectSchema),
     defaultValues,
+    shouldFocusError: true,
   })
+
+  useEffect(() => {
+    if (!form.formState.isDirty) {
+      return
+    }
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+
+    window.addEventListener("beforeunload", onBeforeUnload)
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload)
+    }
+  }, [form.formState.isDirty])
 
   const placesFieldArray = useFieldArray({
     control: form.control,
@@ -125,10 +145,10 @@ export function CreateProjectForm() {
 
   const submitLabel = useMemo(() => {
     if (isSubmitting) {
-      return "Creating..."
+      return "Creating…"
     }
 
-    return "Create project"
+    return "Create Project"
   }, [isSubmitting])
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -195,7 +215,12 @@ export function CreateProjectForm() {
           <FieldGroup>
             <Field data-invalid={!!form.formState.errors.name}>
               <FieldLabel htmlFor="project-name">Name</FieldLabel>
-              <Input id="project-name" placeholder="Summer in Chicago" {...form.register("name")} />
+              <Input
+                id="project-name"
+                autoComplete="off"
+                placeholder="Summer in Chicago…"
+                {...form.register("name")}
+              />
               <FieldError errors={[form.formState.errors.name]} />
             </Field>
 
@@ -203,7 +228,8 @@ export function CreateProjectForm() {
               <FieldLabel htmlFor="project-description">Description</FieldLabel>
               <Textarea
                 id="project-description"
-                placeholder="Optional notes about this trip"
+                autoComplete="off"
+                placeholder="Optional notes about this trip…"
                 rows={4}
                 {...form.register("description")}
               />
@@ -255,7 +281,8 @@ export function CreateProjectForm() {
               >
                 <ComboboxInput
                   id="artwork-search"
-                  placeholder="Search artworks (e.g. Picasso, Chicago)"
+                  autoComplete="off"
+                  placeholder="Search artworks (e.g. Picasso, Chicago)…"
                   showClear
                   disabled={hasReachedPlaceLimit}
                 />
@@ -327,7 +354,8 @@ export function CreateProjectForm() {
                       </div>
 
                       <Textarea
-                        placeholder="Optional notes for this place"
+                        autoComplete="off"
+                        placeholder="Optional notes for this place…"
                         rows={2}
                         {...form.register(`places.${index}.notes`)}
                       />
@@ -343,6 +371,9 @@ export function CreateProjectForm() {
           {formError ? <FieldError>{formError}</FieldError> : null}
 
           <Button disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <HugeiconsIcon aria-hidden="true" icon={Loading03Icon} strokeWidth={2} className="animate-spin" />
+            ) : null}
             {submitLabel}
           </Button>
         </form>

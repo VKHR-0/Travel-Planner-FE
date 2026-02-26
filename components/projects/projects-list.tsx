@@ -68,7 +68,7 @@ function ProjectsListErrorState({
 		<Card>
 			<CardHeader>
 				<CardTitle>Could not load travel projects</CardTitle>
-				<CardDescription>{message}</CardDescription>
+				<CardDescription>{`${message} Check your connection and try Refresh.`}</CardDescription>
 			</CardHeader>
 			<CardFooter>
 				<Button onClick={onRetry} variant="outline">
@@ -168,8 +168,8 @@ export function ProjectsList() {
 		<div className="space-y-4">
 			<div className="flex items-center justify-between gap-3">
 				<Button nativeButton={false} render={<Link href="/new" />}>
-					<HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
-					Create project
+					<HugeiconsIcon aria-hidden="true" icon={PlusSignIcon} strokeWidth={2} />
+					Create Project
 				</Button>
 				<Button
 					disabled={isFetching}
@@ -177,11 +177,12 @@ export function ProjectsList() {
 					variant="outline"
 				>
 					<HugeiconsIcon
+						aria-hidden="true"
 						icon={Refresh01Icon}
 						strokeWidth={2}
 						className={isFetching ? "animate-spin" : ""}
 					/>
-					{isFetching ? "Refreshing..." : "Refresh"}
+					{isFetching ? "Refreshing…" : "Refresh"}
 				</Button>
 			</div>
 			<div className="grid gap-4 md:grid-cols-2">
