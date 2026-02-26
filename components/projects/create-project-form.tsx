@@ -191,7 +191,11 @@ export function CreateProjectForm() {
             <Field data-invalid={!!form.formState.errors.startDate}>
               <FieldLabel htmlFor="project-start-date">Start date</FieldLabel>
               <Popover>
-                <PopoverTrigger render={<Button variant="outline" />} id="project-start-date">
+                <PopoverTrigger
+                  render={<Button variant="outline" />}
+                  id="project-start-date"
+                  className="w-full justify-start text-left"
+                >
                   {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
