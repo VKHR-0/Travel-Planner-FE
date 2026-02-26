@@ -4,16 +4,18 @@ Next.js dashboard for managing travel projects and places. This app talks to you
 
 ## Prerequisites
 
-- Bun `>=1.0`
 - Node.js `>=20` (required by Next tooling)
 - Backend API running (default: `http://localhost:8000`)
+
+You can use any package manager (`npm`, `pnpm`, `yarn`, or `bun`).
+Examples below use `npm`.
 
 ## Setup
 
 1. Install dependencies:
 
 ```bash
-bun install
+npm install
 ```
 
 2. Create env file:
@@ -25,7 +27,7 @@ cp .env.example .env.local
 3. Start dev server:
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 Open `http://localhost:3000`.
@@ -35,19 +37,19 @@ Open `http://localhost:3000`.
 Build production bundle:
 
 ```bash
-bun run build
+npm run build
 ```
 
 Start production server:
 
 ```bash
-bun run start
+npm run start
 ```
 
 Lint:
 
 ```bash
-bun run lint
+npm run lint
 ```
 
 ## Environment Variables
@@ -103,4 +105,4 @@ curl "http://localhost:3000/api/artworks/search?q=monet"
 
 - If project list/create fails, verify backend is running on `API_BASE_URL`.
 - If artwork search fails, check internet access and Art Institute API availability.
-- If Next warns about multiple lockfiles, keep using this project root and Bun scripts.
+- If Next warns about multiple lockfiles, keep using this project root and one package manager consistently.
