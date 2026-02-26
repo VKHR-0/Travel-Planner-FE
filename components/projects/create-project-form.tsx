@@ -144,6 +144,8 @@ export function CreateProjectForm() {
   const selectedDate = selectedStartDate ? new Date(`${selectedStartDate}T00:00:00`) : undefined
 
   const placesError = form.formState.errors.places
+  const selectedPlacesCount = placesFieldArray.fields.length
+  const hasReachedPlaceLimit = selectedPlacesCount >= 10
 
   const addArtwork = (artwork: ArtworkSearchResult) => {
     const alreadyAdded = placesFieldArray.fields.some(
@@ -245,6 +247,7 @@ export function CreateProjectForm() {
                   id="artwork-search"
                   placeholder="Search artworks (e.g. Picasso, Chicago)"
                   showClear
+                  disabled={hasReachedPlaceLimit}
                 />
                 <ComboboxContent>
                   <ComboboxEmpty>
@@ -271,6 +274,16 @@ export function CreateProjectForm() {
                 Search by keyword, then add places to your project list.
               </FieldDescription>
 
+              <p className="text-muted-foreground text-xs">
+                Selected places: {selectedPlacesCount}/10
+              </p>
+
+              {hasReachedPlaceLimit ? (
+                <p className="text-muted-foreground text-sm">
+                  Maximum reached. Remove a place to add another one.
+                </p>
+              ) : null}
+
               {artworksQuery.isLoading ? (
                 <p className="text-muted-foreground text-sm">Searching artworks...</p>
               ) : null}
@@ -296,6 +309,7 @@ export function CreateProjectForm() {
                           size="sm"
                           onClick={() => {
                             placesFieldArray.remove(index)
+                            form.clearErrors("places")
                           }}
                         >
                           Remove
