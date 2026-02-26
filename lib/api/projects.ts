@@ -49,6 +49,6 @@ export async function createProject(
 ): Promise<ProjectWithPlacesResponse> {
   return apiRequest<ProjectWithPlacesResponse>("/projects", {
     method: "POST",
-    body: JSON.stringify(payload),
+    json: payload,
   })
 }
