@@ -1,11 +1,12 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useController, useForm } from "react-hook-form"
 import { z } from "zod"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +14,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
+import { searchArtworks, type ArtworkSearchResult } from "@/lib/api/artworks"
 import { ApiError } from "@/lib/api/errors"
 import { createProject } from "@/lib/api/projects"
 
@@ -20,10 +22,10 @@ const createProjectSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(255, "Name is too long"),
   description: z.string().max(5000, "Description is too long").optional(),
   startDate: z.string().optional(),
-  externalId: z
-    .number({ error: "External place ID is required" })
-    .int("External place ID must be an integer")
-    .positive("External place ID must be greater than 0"),
+  artworkId: z
+    .number({ error: "Please select a place from search results" })
+    .int("Place selection is invalid")
+    .positive("Please select a place from search results"),
 })
 
 type CreateProjectFormValues = z.infer<typeof createProjectSchema>
@@ -32,16 +34,43 @@ const defaultValues: CreateProjectFormValues = {
   name: "",
   description: "",
   startDate: "",
-  externalId: 0,
+  artworkId: 0,
+}
+
+function getArtworkLabel(artwork: ArtworkSearchResult): string {
+  if (artwork.artist_title) {
+    return `${artwork.title ?? "Untitled"} - ${artwork.artist_title}`
+  }
+
+  return artwork.title ?? `Artwork #${artwork.id}`
 }
 
 export function CreateProjectForm() {
   const [formError, setFormError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkSearchResult | null>(null)
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim())
+    }, 350)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [searchQuery])
 
   const form = useForm<CreateProjectFormValues>({
     resolver: zodResolver(createProjectSchema),
     defaultValues,
+  })
+
+  const artworksQuery = useQuery({
+    queryKey: ["artwork-search", debouncedSearchQuery],
+    queryFn: () => searchArtworks(debouncedSearchQuery),
+    enabled: debouncedSearchQuery.length >= 2,
   })
 
   const createProjectMutation = useMutation({
@@ -49,6 +78,9 @@ export function CreateProjectForm() {
     onSuccess: async () => {
       setFormError(null)
       form.reset(defaultValues)
+      setSearchQuery("")
+      setDebouncedSearchQuery("")
+      setSelectedArtwork(null)
       await queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
     onError: (error) => {
@@ -80,7 +112,7 @@ export function CreateProjectForm() {
       start_date: values.startDate || null,
       places: [
         {
-          external_id: values.externalId,
+          external_id: values.artworkId,
         },
       ],
     })
@@ -98,9 +130,7 @@ export function CreateProjectForm() {
     <Card>
       <CardHeader>
         <CardTitle>Add new travel project</CardTitle>
-        <CardDescription>
-          Create a project and include one place external ID from the Art Institute API.
-        </CardDescription>
+        <CardDescription>Create a project and pick at least one place from Art Institute results.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={onSubmit}>
@@ -141,21 +171,86 @@ export function CreateProjectForm() {
               <FieldError errors={[form.formState.errors.startDate]} />
             </Field>
 
-            <Field data-invalid={!!form.formState.errors.externalId}>
-              <FieldLabel htmlFor="project-first-place-id">First place external ID</FieldLabel>
+            <Field data-invalid={!!form.formState.errors.artworkId}>
+              <FieldLabel htmlFor="artwork-search">First place</FieldLabel>
               <Input
-                id="project-first-place-id"
-                inputMode="numeric"
-                placeholder="e.g. 129884"
-                type="number"
-                {...form.register("externalId", {
-                  valueAsNumber: true,
-                })}
+                id="artwork-search"
+                placeholder="Search artworks (e.g. Picasso, Chicago)"
+                value={searchQuery}
+                onChange={(event) => {
+                  if (selectedArtwork) {
+                    setSelectedArtwork(null)
+                    form.setValue("artworkId", 0)
+                  }
+
+                  setSearchQuery(event.target.value)
+                }}
               />
               <FieldDescription>
-                Backend currently requires at least one place while creating a project.
+                Search by keyword, then select one result to attach as the first place.
               </FieldDescription>
-              <FieldError errors={[form.formState.errors.externalId]} />
+
+              {selectedArtwork ? (
+                <div className="bg-muted/40 flex items-center justify-between rounded-lg border p-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{getArtworkLabel(selectedArtwork)}</p>
+                    <p className="text-muted-foreground text-xs">External ID: {selectedArtwork.id}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedArtwork(null)
+                      form.setValue("artworkId", 0)
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              ) : null}
+
+              {artworksQuery.isLoading ? (
+                <p className="text-muted-foreground text-sm">Searching artworks...</p>
+              ) : null}
+
+              {artworksQuery.isError ? (
+                <p className="text-destructive text-sm">Unable to load search results right now.</p>
+              ) : null}
+
+              {artworksQuery.data && artworksQuery.data.length > 0 && !selectedArtwork ? (
+                <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
+                  {artworksQuery.data.map((artwork) => (
+                    <button
+                      key={artwork.id}
+                      type="button"
+                      className="hover:bg-muted/60 flex w-full items-center justify-between rounded-md border p-2 text-left"
+                      onClick={() => {
+                        form.setValue("artworkId", artwork.id, { shouldValidate: true })
+                        setSelectedArtwork(artwork)
+                        setSearchQuery(getArtworkLabel(artwork))
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{artwork.title ?? "Untitled"}</p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {artwork.artist_title ?? "Unknown artist"}
+                        </p>
+                      </div>
+                      <Badge variant="outline">#{artwork.id}</Badge>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {debouncedSearchQuery.length >= 2 &&
+              artworksQuery.data &&
+              artworksQuery.data.length === 0 &&
+              !selectedArtwork ? (
+                <p className="text-muted-foreground text-sm">No artworks found for this query.</p>
+              ) : null}
+
+              <FieldError errors={[form.formState.errors.artworkId]} />
             </Field>
           </FieldGroup>
 
