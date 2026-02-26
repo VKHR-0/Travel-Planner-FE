@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useEffect, useMemo, useState } from "react"
 import { useController, useFieldArray, useForm } from "react-hook-form"
+import { toast } from "sonner"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -100,14 +101,23 @@ export function CreateProjectForm() {
       setDebouncedSearchQuery("")
       setSelectedArtworkOption(null)
       await queryClient.invalidateQueries({ queryKey: ["projects"] })
+      toast.success("Project created", {
+        description: "Your travel project was saved successfully.",
+      })
     },
     onError: (error) => {
       if (error instanceof ApiError) {
         setFormError(error.message)
+        toast.error("Could not create project", {
+          description: error.message,
+        })
         return
       }
 
       setFormError("Unable to create project")
+      toast.error("Could not create project", {
+        description: "Unexpected error occurred. Please try again.",
+      })
     },
   })
 
