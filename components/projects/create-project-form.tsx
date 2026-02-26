@@ -2,13 +2,16 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { format } from "date-fns"
 import { useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
+import { useController, useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError } from "@/lib/api/errors"
 import { createProject } from "@/lib/api/projects"
@@ -83,6 +86,14 @@ export function CreateProjectForm() {
     })
   })
 
+  const startDateController = useController({
+    control: form.control,
+    name: "startDate",
+  })
+
+  const selectedStartDate = startDateController.field.value
+  const selectedDate = selectedStartDate ? new Date(`${selectedStartDate}T00:00:00`) : undefined
+
   return (
     <Card>
       <CardHeader>
@@ -113,7 +124,20 @@ export function CreateProjectForm() {
 
             <Field data-invalid={!!form.formState.errors.startDate}>
               <FieldLabel htmlFor="project-start-date">Start date</FieldLabel>
-              <Input id="project-start-date" type="date" {...form.register("startDate")} />
+              <Popover>
+                <PopoverTrigger render={<Button variant="outline" />} id="project-start-date">
+                  {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      startDateController.field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
               <FieldError errors={[form.formState.errors.startDate]} />
             </Field>
 
