@@ -1,6 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Loading03Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -139,8 +142,13 @@ export function ProjectsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <Button render={<Link href="/new" />}>
+          <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
+          Create project
+        </Button>
         <Button disabled={isFetching} onClick={() => refetch()} variant="outline">
+          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className={isFetching ? "animate-spin" : ""} />
           {isFetching ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
