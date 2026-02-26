@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useEffect, useMemo, useState } from "react"
-import { useController, useForm } from "react-hook-form"
+import { useController, useFieldArray, useForm } from "react-hook-form"
 import { z } from "zod"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,10 +22,24 @@ const createProjectSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(255, "Name is too long"),
   description: z.string().max(5000, "Description is too long").optional(),
   startDate: z.string().optional(),
-  artworkId: z
-    .number({ error: "Please select a place from search results" })
-    .int("Place selection is invalid")
-    .positive("Please select a place from search results"),
+  places: z
+    .array(
+      z.object({
+        externalId: z.number().int().positive(),
+        title: z.string(),
+        artistTitle: z.string().nullable(),
+        notes: z.string().max(5000, "Notes are too long").optional(),
+      }),
+    )
+    .min(1, "Add at least one place")
+    .max(10, "You can add up to 10 places")
+    .refine(
+      (places) => {
+        const ids = places.map((place) => place.externalId)
+        return new Set(ids).size === ids.length
+      },
+      { message: "Do not add the same place more than once" },
+    ),
 })
 
 type CreateProjectFormValues = z.infer<typeof createProjectSchema>
@@ -34,22 +48,13 @@ const defaultValues: CreateProjectFormValues = {
   name: "",
   description: "",
   startDate: "",
-  artworkId: 0,
-}
-
-function getArtworkLabel(artwork: ArtworkSearchResult): string {
-  if (artwork.artist_title) {
-    return `${artwork.title ?? "Untitled"} - ${artwork.artist_title}`
-  }
-
-  return artwork.title ?? `Artwork #${artwork.id}`
+  places: [],
 }
 
 export function CreateProjectForm() {
   const [formError, setFormError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
-  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkSearchResult | null>(null)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -67,6 +72,11 @@ export function CreateProjectForm() {
     defaultValues,
   })
 
+  const placesFieldArray = useFieldArray({
+    control: form.control,
+    name: "places",
+  })
+
   const artworksQuery = useQuery({
     queryKey: ["artwork-search", debouncedSearchQuery],
     queryFn: () => searchArtworks(debouncedSearchQuery),
@@ -80,7 +90,6 @@ export function CreateProjectForm() {
       form.reset(defaultValues)
       setSearchQuery("")
       setDebouncedSearchQuery("")
-      setSelectedArtwork(null)
       await queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
     onError: (error) => {
@@ -110,11 +119,10 @@ export function CreateProjectForm() {
       name: values.name,
       description: values.description?.trim() ? values.description.trim() : null,
       start_date: values.startDate || null,
-      places: [
-        {
-          external_id: values.artworkId,
-        },
-      ],
+      places: values.places.map((place) => ({
+        external_id: place.externalId,
+        notes: place.notes?.trim() ? place.notes.trim() : null,
+      })),
     })
   })
 
@@ -126,11 +134,39 @@ export function CreateProjectForm() {
   const selectedStartDate = startDateController.field.value
   const selectedDate = selectedStartDate ? new Date(`${selectedStartDate}T00:00:00`) : undefined
 
+  const placesError = form.formState.errors.places
+
+  const addArtwork = (artwork: ArtworkSearchResult) => {
+    const alreadyAdded = placesFieldArray.fields.some(
+      (field) => field.externalId === artwork.id,
+    )
+
+    if (alreadyAdded) {
+      form.setError("places", { message: "This place is already selected" })
+      return
+    }
+
+    if (placesFieldArray.fields.length >= 10) {
+      form.setError("places", { message: "You can add up to 10 places" })
+      return
+    }
+
+    form.clearErrors("places")
+    placesFieldArray.append({
+      externalId: artwork.id,
+      title: artwork.title ?? `Artwork #${artwork.id}`,
+      artistTitle: artwork.artist_title,
+      notes: "",
+    })
+    setSearchQuery("")
+    setDebouncedSearchQuery("")
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Add new travel project</CardTitle>
-        <CardDescription>Create a project and pick at least one place from Art Institute results.</CardDescription>
+        <CardDescription>Create a project and pick 1 to 10 places from Art Institute results.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={onSubmit}>
@@ -171,44 +207,19 @@ export function CreateProjectForm() {
               <FieldError errors={[form.formState.errors.startDate]} />
             </Field>
 
-            <Field data-invalid={!!form.formState.errors.artworkId}>
-              <FieldLabel htmlFor="artwork-search">First place</FieldLabel>
+            <Field data-invalid={!!placesError}>
+              <FieldLabel htmlFor="artwork-search">Places</FieldLabel>
               <Input
                 id="artwork-search"
                 placeholder="Search artworks (e.g. Picasso, Chicago)"
                 value={searchQuery}
                 onChange={(event) => {
-                  if (selectedArtwork) {
-                    setSelectedArtwork(null)
-                    form.setValue("artworkId", 0)
-                  }
-
                   setSearchQuery(event.target.value)
                 }}
               />
               <FieldDescription>
-                Search by keyword, then select one result to attach as the first place.
+                Search by keyword, then add places to your project list.
               </FieldDescription>
-
-              {selectedArtwork ? (
-                <div className="bg-muted/40 flex items-center justify-between rounded-lg border p-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{getArtworkLabel(selectedArtwork)}</p>
-                    <p className="text-muted-foreground text-xs">External ID: {selectedArtwork.id}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedArtwork(null)
-                      form.setValue("artworkId", 0)
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              ) : null}
 
               {artworksQuery.isLoading ? (
                 <p className="text-muted-foreground text-sm">Searching artworks...</p>
@@ -218,7 +229,7 @@ export function CreateProjectForm() {
                 <p className="text-destructive text-sm">Unable to load search results right now.</p>
               ) : null}
 
-              {artworksQuery.data && artworksQuery.data.length > 0 && !selectedArtwork ? (
+              {artworksQuery.data && artworksQuery.data.length > 0 ? (
                 <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
                   {artworksQuery.data.map((artwork) => (
                     <button
@@ -226,9 +237,7 @@ export function CreateProjectForm() {
                       type="button"
                       className="hover:bg-muted/60 flex w-full items-center justify-between rounded-md border p-2 text-left"
                       onClick={() => {
-                        form.setValue("artworkId", artwork.id, { shouldValidate: true })
-                        setSelectedArtwork(artwork)
-                        setSearchQuery(getArtworkLabel(artwork))
+                        addArtwork(artwork)
                       }}
                     >
                       <div className="min-w-0">
@@ -245,12 +254,44 @@ export function CreateProjectForm() {
 
               {debouncedSearchQuery.length >= 2 &&
               artworksQuery.data &&
-              artworksQuery.data.length === 0 &&
-              !selectedArtwork ? (
+              artworksQuery.data.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No artworks found for this query.</p>
               ) : null}
 
-              <FieldError errors={[form.formState.errors.artworkId]} />
+              {placesFieldArray.fields.length > 0 ? (
+                <div className="space-y-2 rounded-lg border p-2">
+                  {placesFieldArray.fields.map((field, index) => (
+                    <div key={field.id} className="space-y-2 rounded-md border p-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{field.title}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {field.artistTitle ?? "Unknown artist"} - ID {field.externalId}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            placesFieldArray.remove(index)
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+
+                      <Textarea
+                        placeholder="Optional notes for this place"
+                        rows={2}
+                        {...form.register(`places.${index}.notes`)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <FieldError errors={[placesError]} />
             </Field>
           </FieldGroup>
 
