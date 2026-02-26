@@ -6,9 +6,16 @@ import { format } from "date-fns"
 import { useEffect, useMemo, useState } from "react"
 import { useController, useFieldArray, useForm } from "react-hook-form"
 import { z } from "zod"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -55,6 +62,7 @@ export function CreateProjectForm() {
   const [formError, setFormError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [selectedArtworkOption, setSelectedArtworkOption] = useState<ArtworkSearchResult | null>(null)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -90,6 +98,7 @@ export function CreateProjectForm() {
       form.reset(defaultValues)
       setSearchQuery("")
       setDebouncedSearchQuery("")
+      setSelectedArtworkOption(null)
       await queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
     onError: (error) => {
@@ -158,6 +167,7 @@ export function CreateProjectForm() {
       artistTitle: artwork.artist_title,
       notes: "",
     })
+    setSelectedArtworkOption(null)
     setSearchQuery("")
     setDebouncedSearchQuery("")
   }
@@ -213,14 +223,50 @@ export function CreateProjectForm() {
 
             <Field data-invalid={!!placesError}>
               <FieldLabel htmlFor="artwork-search">Places</FieldLabel>
-              <Input
-                id="artwork-search"
-                placeholder="Search artworks (e.g. Picasso, Chicago)"
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value)
+              <Combobox
+                items={artworksQuery.data ?? []}
+                value={selectedArtworkOption}
+                inputValue={searchQuery}
+                onInputValueChange={(value) => {
+                  setSearchQuery(value)
                 }}
-              />
+                onValueChange={(value) => {
+                  if (!value) {
+                    return
+                  }
+
+                  addArtwork(value)
+                }}
+                itemToStringLabel={(item) => `${item.title ?? "Untitled"} ${item.artist_title ?? ""}`}
+                itemToStringValue={(item) => `${item.id}`}
+                isItemEqualToValue={(item, value) => item.id === value.id}
+              >
+                <ComboboxInput
+                  id="artwork-search"
+                  placeholder="Search artworks (e.g. Picasso, Chicago)"
+                  showClear
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>
+                    {debouncedSearchQuery.length < 2
+                      ? "Type at least 2 characters"
+                      : "No artworks found for this query."}
+                  </ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item.id} value={item}>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{item.title ?? "Untitled"}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {item.artist_title ?? "Unknown artist"}
+                          </p>
+                        </div>
+                        <span className="text-muted-foreground ml-auto text-xs">#{item.id}</span>
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
               <FieldDescription>
                 Search by keyword, then add places to your project list.
               </FieldDescription>
@@ -231,35 +277,6 @@ export function CreateProjectForm() {
 
               {artworksQuery.isError ? (
                 <p className="text-destructive text-sm">Unable to load search results right now.</p>
-              ) : null}
-
-              {artworksQuery.data && artworksQuery.data.length > 0 ? (
-                <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
-                  {artworksQuery.data.map((artwork) => (
-                    <button
-                      key={artwork.id}
-                      type="button"
-                      className="hover:bg-muted/60 flex w-full items-center justify-between rounded-md border p-2 text-left"
-                      onClick={() => {
-                        addArtwork(artwork)
-                      }}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{artwork.title ?? "Untitled"}</p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {artwork.artist_title ?? "Unknown artist"}
-                        </p>
-                      </div>
-                      <Badge variant="outline">#{artwork.id}</Badge>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {debouncedSearchQuery.length >= 2 &&
-              artworksQuery.data &&
-              artworksQuery.data.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No artworks found for this query.</p>
               ) : null}
 
               {placesFieldArray.fields.length > 0 ? (
