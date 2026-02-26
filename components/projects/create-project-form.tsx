@@ -315,21 +315,21 @@ export function CreateProjectForm() {
                 Selected places: {selectedPlacesCount}/10
               </p>
 
-              {hasReachedPlaceLimit ? (
+              {hasReachedPlaceLimit && (
                 <p className="text-muted-foreground text-sm">
                   Maximum reached. Remove a place to add another one.
                 </p>
-              ) : null}
+              )}
 
-              {artworksQuery.isLoading ? (
+              {artworksQuery.isLoading && (
                 <p className="text-muted-foreground text-sm">Searching artworks...</p>
-              ) : null}
+              )}
 
-              {artworksQuery.isError ? (
+              {artworksQuery.isError && (
                 <p className="text-destructive text-sm">Unable to load search results right now.</p>
-              ) : null}
+              )}
 
-              {placesFieldArray.fields.length > 0 ? (
+              {placesFieldArray.fields.length > 0 && (
                 <div className="space-y-2 rounded-lg border p-2">
                   {placesFieldArray.fields.map((field, index) => (
                     <div key={field.id} className="space-y-2 rounded-md border p-2">
@@ -362,18 +362,18 @@ export function CreateProjectForm() {
                     </div>
                   ))}
                 </div>
-              ) : null}
+              )}
 
               <FieldError errors={[placesError]} />
             </Field>
           </FieldGroup>
 
-          {formError ? <FieldError>{formError}</FieldError> : null}
+          {formError && <FieldError>{formError}</FieldError>}
 
           <Button disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
+            {isSubmitting && (
               <HugeiconsIcon aria-hidden="true" icon={Loading03Icon} strokeWidth={2} className="animate-spin" />
-            ) : null}
+            )}
             {submitLabel}
           </Button>
         </form>
