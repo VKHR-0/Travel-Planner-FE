@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Travel Planner Frontend
 
-## Getting Started
+Next.js dashboard for managing travel projects and places. This app talks to your backend API and also proxies Art Institute search requests.
 
-First, run the development server:
+## Prerequisites
+
+- Bun `>=1.0`
+- Node.js `>=20` (required by Next tooling)
+- Backend API running (default: `http://localhost:8000`)
+
+## Setup
+
+1. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create env file:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Start dev server:
 
-## Learn More
+```bash
+bun run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build & Start
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Build production bundle:
 
-## Deploy on Vercel
+```bash
+bun run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Start production server:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+bun run start
+```
+
+Lint:
+
+```bash
+bun run lint
+```
+
+## Environment Variables
+
+Create `.env.local`:
+
+```bash
+API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_API_BASE_URL=/api
+```
+
+Notes:
+- `API_BASE_URL`: used on Next server routes (proxy to your backend).
+- `NEXT_PUBLIC_API_BASE_URL`: used by browser client; default `/api` is recommended.
+
+## Routes
+
+- `/` - list travel projects
+- `/new` - create a new project with places
+- `/api/projects` - Next proxy for backend projects API
+- `/api/artworks/search?q=<query>` - Next proxy for Art Institute search
+
+## Example Requests
+
+List projects through frontend proxy:
+
+```bash
+curl "http://localhost:3000/api/projects"
+```
+
+Create a project through frontend proxy:
+
+```bash
+curl -X POST "http://localhost:3000/api/projects" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Chicago Weekend",
+    "description": "Art walk plan",
+    "start_date": "2026-03-20",
+    "places": [
+      {"external_id": 129884, "notes": "Start early"}
+    ]
+  }'
+```
+
+Search artworks:
+
+```bash
+curl "http://localhost:3000/api/artworks/search?q=monet"
+```
+
+## Troubleshooting
+
+- If project list/create fails, verify backend is running on `API_BASE_URL`.
+- If artwork search fails, check internet access and Art Institute API availability.
+- If Next warns about multiple lockfiles, keep using this project root and Bun scripts.
